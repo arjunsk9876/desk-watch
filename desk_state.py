@@ -38,6 +38,8 @@ def next_state(state, person_present, item_present):
     elif state == OCCUPIED:
         if not person_present and not item_present:
             return FREE          # they left and took everything with them
+        if not person_present and item_present:
+            return RESERVED_EMPTY   # they left, but their stuff is still here
 
     return state
 
