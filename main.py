@@ -114,7 +114,8 @@ def run(settings):
                 last_states[desk_id] = status.state
 
             # Step 4: show the public dashboard - status cards only, never the camera image.
-            cv2.imshow(DASHBOARD_WINDOW, draw_dashboard(settings["desks"], statuses))
+            dashboard = draw_dashboard(settings["desks"], statuses, settings["long_reserved_minutes"])
+            cv2.imshow(DASHBOARD_WINDOW, dashboard)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
     except KeyboardInterrupt:

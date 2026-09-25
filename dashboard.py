@@ -33,12 +33,14 @@ STYLES = {
     OCCUPIED: {"color": (219, 152, 52), "text": WHITE, "label": "Occupied"},
     RESERVED_EMPTY: {"color": (15, 196, 241), "text": DARK, "label": "Reserved - empty"},
 }
+# Reserved-but-empty for longer than long_reserved_minutes: fair game.
+LONG_STYLE = {"color": (34, 87, 230), "text": WHITE, "label": "Available"}
 UNKNOWN_STYLE = {"color": (90, 90, 90), "text": WHITE, "label": "..."}
 
 
 # ---- 2. Draw the whole dashboard ----
 
-def draw_dashboard(desks, statuses):
+def draw_dashboard(desks, statuses, long_reserved_minutes=30):
     """Return an image with one card per desk. `statuses` maps desk_id -> DeskStatus."""
     columns = 1 if len(desks) == 1 else 2
     rows = math.ceil(len(desks) / columns)
@@ -51,7 +53,7 @@ def draw_dashboard(desks, statuses):
         row, column = divmod(index, columns)
         x = MARGIN + column * (CARD_WIDTH + GAP)
         y = HEADER + row * (CARD_HEIGHT + GAP)
-        draw_card(canvas, x, y, desk["name"], statuses.get(desk["id"]))
+        draw_card(canvas, x, y, desk["name"], statuses.get(desk["id"]), long_reserved_minutes)
 
     note = "Status only - no video, no faces, no images stored."
     put_text(canvas, note, (MARGIN, height - MARGIN + 4), 0.55, GREY, 1)
@@ -68,13 +70,23 @@ def draw_header(canvas):
 
 # ---- 3. Draw one desk card ----
 
-def draw_card(canvas, x, y, desk_name, status):
-    style = STYLES.get(status.state, UNKNOWN_STYLE) if status else UNKNOWN_STYLE
+def draw_card(canvas, x, y, desk_name, status, long_reserved_minutes):
+    if status is None:
+        style = UNKNOWN_STYLE
+    elif status.long:
+        style = LONG_STYLE
+    else:
+        style = STYLES.get(status.state, UNKNOWN_STYLE)
     rounded_rectangle(canvas, x, y, CARD_WIDTH, CARD_HEIGHT, 18, style["color"])
 
     put_text(canvas, desk_name, (x + 24, y + 44), 0.8, style["text"], 1)
 
-    if status and status.state == RESERVED_EMPTY:
+    if status and status.long:
+        # Left empty too long: tell people they can take it.
+        empty_for = f"Empty {format_limit(long_reserved_minutes)}"
+        put_centered(canvas, empty_for, x, y + 125, 1.2, style["text"], 2)
+        put_centered(canvas, style["label"], x, y + 185, 1.6, style["text"], 3)
+    elif status and status.state == RESERVED_EMPTY:
         # Reserved desks get a live timer: how long has the owner been gone?
         put_centered(canvas, style["label"], x, y + 125, 1.2, style["text"], 2)
         put_centered(canvas, format_duration(status.seconds_in_state), x, y + 185,
@@ -87,6 +99,13 @@ def format_duration(seconds):
     """Turn 125.4 seconds into '2m 05s'."""
     minutes, seconds = divmod(int(seconds), 60)
     return f"{minutes}m {seconds:02d}s"
+
+
+def format_limit(minutes):
+    """30 -> '30+ min', 0.5 -> '30+ sec' (demo settings use very short limits)."""
+    if minutes >= 1:
+        return f"{minutes:g}+ min"
+    return f"{round(minutes * 60)}+ sec"
 
 
 # ---- 4. Small drawing helpers ----
