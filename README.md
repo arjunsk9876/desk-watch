@@ -67,7 +67,7 @@ Press **q** in a window (or Ctrl+C in the terminal) to quit.
 Every frame from the camera goes through four steps:
 
 1. **Detect** (`detector.py`) - YOLO finds boxes around people and a short list of items
-   (backpack, handbag, suitcase, laptop, book). It only knows "a person", never *who*.
+   (backpack, laptop, cell phone, book, bottle, cup). It only knows "a person", never *who*.
 2. **Assign to desks** (`detector.py`) - a box belongs to a desk if the center of the box is
    inside that desk's zone. Each desk gets two yes/no answers: *is a person here?* and
    *is an item here?*
@@ -106,7 +106,7 @@ Every frame from the camera goes through four steps:
 | `confidence` | 0.25 | how sure YOLO must be before a box counts |
 | `smoothing_frames` | 10 | frames used for the anti-flicker vote |
 | `long_reserved_minutes` | 30 | when a reserved-but-empty desk becomes "available" (0.5 in `demo_settings.json`) |
-| `item_classes` | backpack, handbag, suitcase, laptop, book | YOLO classes that count as "an item" |
+| `item_classes` | backpack, laptop, cell phone, book, bottle, cup | YOLO classes that count as "an item" |
 
 ## Privacy
 

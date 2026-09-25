@@ -22,7 +22,7 @@ PERSON_CLASS = "person"
 # which one it is - only that something was left behind. These are standard
 # YOLO (COCO) class names; override them with "item_classes" in settings.json
 # after testing with --check-items. (There is no "jacket" class in COCO.)
-ITEM_CLASSES = ["backpack", "handbag", "suitcase", "laptop", "book"]
+ITEM_CLASSES = ["backpack", "laptop", "cell phone", "book", "bottle", "cup"]
 
 
 @dataclass
