@@ -46,8 +46,8 @@ def next_state(state, person_present, item_present):
 
 
 def mostly_true(history):
-    """True if more than half of the recent frames said yes."""
-    return sum(history) > len(history) / 2
+    """True if more than half of the last `maxlen` frames said yes (missing frames count as no)."""
+    return sum(history) > history.maxlen / 2
 
 
 # ---- 4. Keep track of every desk over time ----
