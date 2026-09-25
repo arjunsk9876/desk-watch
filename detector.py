@@ -9,6 +9,8 @@ The rest of desk-watch only ever sees simple True/False answers per desk.
 
 from dataclasses import dataclass
 
+import cv2
+import numpy as np
 from ultralytics import YOLO
 
 # ---- 1. What we look for ----
@@ -73,3 +75,29 @@ class DeskDetector:
                 box=tuple(float(value) for value in box.xyxy[0]),
             ))
         return detections
+
+    # ---- 4. Turn boxes into a simple yes/no per desk ----
+
+    def check_desks(self, detections):
+        """Return {desk_id: {"person": bool, "item": bool}} for every desk zone."""
+        answers = {}
+        for desk in self.desks:
+            in_zone = [d for d in detections if point_in_zone(d.center, desk["zone"])]
+            answers[desk["id"]] = {
+                "person": any(d.is_person for d in in_zone),
+                "item": any(not d.is_person for d in in_zone),
+            }
+        return answers
+
+
+# ---- 5. Is a point inside a desk zone? ----
+
+def point_in_zone(point, zone):
+    """True if the (x, y) point is inside the polygon drawn during calibration.
+
+    We use the CENTER of each box: a person's box center lands on their body,
+    so it falls inside the desk zone they are sitting at, not the one next door.
+    """
+    contour = np.array(zone, dtype=np.float32)
+    # pointPolygonTest returns +1 inside, 0 on the edge, -1 outside.
+    return cv2.pointPolygonTest(contour, (float(point[0]), float(point[1])), False) >= 0
