@@ -12,7 +12,9 @@ import time
 
 import cv2
 
+DASHBOARD_WINDOW = "desk-watch dashboard"
 from config import load_settings, SettingsError, DEFAULT_SETTINGS_PATH
+from dashboard import draw_dashboard
 from desk_state import DeskTracker
 from detector import DeskDetector, PERSON_CLASS
 
@@ -110,10 +112,16 @@ def run(settings):
                 if old_state is not None and old_state != status.state:
                     print(f"{desk_id}: {old_state} -> {status.state}")
                 last_states[desk_id] = status.state
+
+            # Step 4: show the public dashboard - status cards only, never the camera image.
+            cv2.imshow(DASHBOARD_WINDOW, draw_dashboard(settings["desks"], statuses))
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
     except KeyboardInterrupt:
         pass
     finally:
         camera.release()
+        cv2.destroyAllWindows()
 
 
 # ---- 5. Start here ----
