@@ -19,6 +19,7 @@ from config import load_settings, SettingsError, DEFAULT_SETTINGS_PATH
 from dashboard import draw_dashboard
 from desk_state import DeskTracker
 from detector import DeskDetector, PERSON_CLASS, draw_debug
+from logger import EventLogger
 
 
 # ---- 1. Command line options ----
@@ -90,6 +91,7 @@ def run(settings, debug=False):
     detector = make_detector(settings)
     tracker = DeskTracker(settings["smoothing_frames"], settings["long_reserved_minutes"])
     camera = open_camera(settings["camera_index"])
+    logger = EventLogger()
     last_states = {}   # desk_id -> state last frame, so we can spot changes
 
     print("desk-watch running. Press q in the window (or Ctrl+C) to quit.")
@@ -115,6 +117,7 @@ def run(settings, debug=False):
                 old_state = last_states.get(desk_id)
                 if old_state is not None and old_state != status.state:
                     print(f"{desk_id}: {old_state} -> {status.state}")
+                    logger.log(desk_id, old_state, status.state)
                 last_states[desk_id] = status.state
 
             # Step 4: show the public dashboard - status cards only, never the camera image.
