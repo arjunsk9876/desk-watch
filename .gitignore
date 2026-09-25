@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# YOLO downloads this automatically on first run
+yolov8n.pt
+
+# Status-change logs (text only, but local to each machine)
+logs/
+
+# Demo recordings made with --record (never part of the product)
+*.mp4
