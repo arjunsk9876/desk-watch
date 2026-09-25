@@ -1,0 +1,18 @@
+{
+  "camera_index": 0,
+  "confidence": 0.25,
+  "smoothing_frames": 10,
+  "long_reserved_minutes": 30,
+  "desks": [
+    {
+      "id": "desk_1",
+      "name": "Desk 1",
+      "zone": [[40, 200], [300, 200], [300, 460], [40, 460]]
+    },
+    {
+      "id": "desk_2",
+      "name": "Desk 2",
+      "zone": [[340, 200], [600, 200], [600, 460], [340, 460]]
+    }
+  ]
+}
