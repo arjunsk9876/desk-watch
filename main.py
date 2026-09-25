@@ -13,6 +13,7 @@ import time
 import cv2
 
 from config import load_settings, SettingsError, DEFAULT_SETTINGS_PATH
+from desk_state import DeskTracker
 from detector import DeskDetector, PERSON_CLASS
 
 
@@ -77,7 +78,45 @@ def check_items(settings):
         camera.release()
 
 
-# ---- 4. Start here ----
+# ---- 4. The live loop: camera -> detector -> desk states ----
+
+def run(settings):
+    detector = make_detector(settings)
+    tracker = DeskTracker(settings["smoothing_frames"], settings["long_reserved_minutes"])
+    camera = open_camera(settings["camera_index"])
+    last_states = {}   # desk_id -> state last frame, so we can spot changes
+
+    print("desk-watch running. Press q in the window (or Ctrl+C) to quit.")
+    try:
+        while True:
+            ok, frame = camera.read()
+            if not ok:
+                continue
+            now = time.time()
+
+            # Step 1: YOLO finds people and items in the frame.
+            detections = detector.detect(frame)
+            # Step 2: turn boxes into "person yes/no, item yes/no" for each desk.
+            desk_answers = detector.check_desks(detections)
+            # Step 3: update each desk's state machine.
+            statuses = {}
+            for desk in settings["desks"]:
+                answer = desk_answers[desk["id"]]
+                statuses[desk["id"]] = tracker.update(desk["id"], answer["person"],
+                                                      answer["item"], now)
+
+            for desk_id, status in statuses.items():
+                old_state = last_states.get(desk_id)
+                if old_state is not None and old_state != status.state:
+                    print(f"{desk_id}: {old_state} -> {status.state}")
+                last_states[desk_id] = status.state
+    except KeyboardInterrupt:
+        pass
+    finally:
+        camera.release()
+
+
+# ---- 5. Start here ----
 
 def main():
     args = parse_args()
@@ -89,6 +128,10 @@ def main():
     if args.check_items:
         check_items(settings)
         return
+    if not settings["desks"]:
+        sys.exit("No desks in the settings file. Run 'python calibrate.py' first.")
+
+    run(settings)
 
 
 if __name__ == "__main__":
