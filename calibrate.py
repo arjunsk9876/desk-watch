@@ -3,13 +3,16 @@ calibrate.py - Draw where each desk is in the camera view.
 
 Run `python calibrate.py`, then click 4 corners around each desk (include
 the chair, so a seated person's body lands inside the zone). Up to 4 desks.
-Keys:  n = next desk   q = quit
+Keys:  n = next desk   s = save   r = reset   q = quit
 """
 
 import argparse
 import sys
+from pathlib import Path
 
 import cv2
+
+from config import DEFAULTS, DEFAULT_SETTINGS_PATH, load_settings, save_settings
 
 MAX_DESKS = 4
 POINTS_PER_DESK = 4
@@ -39,14 +42,25 @@ class Calibration:
             self.zones.append(self.current)
             self.current = []
 
+    def reset(self):
+        """Throw away every zone and start over."""
+        self.zones = []
+        self.current = []
+
+    def finished_zones(self):
+        """All complete zones, including the one being drawn if it has 4 corners."""
+        if len(self.current) == POINTS_PER_DESK:
+            return self.zones + [self.current]
+        return self.zones
+
     def instructions(self):
         """The line of help text shown at the top of the window."""
         desk_number = len(self.zones) + 1
         if len(self.zones) >= MAX_DESKS:
-            return f"All {MAX_DESKS} desks drawn.  q = quit"
+            return f"All {MAX_DESKS} desks drawn.  s = save   r = reset   q = quit"
         if len(self.current) < POINTS_PER_DESK:
             return f"Desk {desk_number}: click corner {len(self.current) + 1} of {POINTS_PER_DESK}"
-        return f"Desk {desk_number} done.  n = next desk   q = quit"
+        return f"Desk {desk_number} done.  n = next desk   s = save   r = reset   q = quit"
 
 
 # ---- 2. Draw the zones on top of the camera image ----
@@ -74,16 +88,41 @@ def draw_zone(frame, points, color, closed):
         cv2.line(frame, tuple(start), tuple(end), color, 2)
 
 
-# ---- 3. Main loop: show camera, handle keys ----
+# ---- 3. Save zones into the settings file ----
+
+def save(calibration, path):
+    """Write the desk zones to settings, keeping any other settings already there."""
+    zones = calibration.finished_zones()
+    if not zones:
+        print("Nothing to save yet - draw at least one desk (4 corners).")
+        return
+
+    settings = load_settings(path) if Path(path).exists() else dict(DEFAULTS)
+    settings["desks"] = [
+        {"id": f"desk_{number}", "name": f"Desk {number}", "zone": zone}
+        for number, zone in enumerate(zones, start=1)
+    ]
+    save_settings(settings, path)
+    print(f"Saved {len(zones)} desk(s) to {path}")
+
+
+# ---- 4. Main loop: show camera, handle keys ----
 
 def main():
     parser = argparse.ArgumentParser(description="Draw desk zones for desk-watch")
-    parser.add_argument("--camera", type=int, default=0, help="camera index")
+    parser.add_argument("--settings", default=DEFAULT_SETTINGS_PATH, help="file to save zones into")
+    parser.add_argument("--camera", type=int, default=None,
+                        help="camera index (default: camera_index from the settings file, or 0)")
     args = parser.parse_args()
 
-    camera = cv2.VideoCapture(args.camera)
+    camera_index = args.camera
+    if camera_index is None:
+        existing = load_settings(args.settings) if Path(args.settings).exists() else DEFAULTS
+        camera_index = existing["camera_index"]
+
+    camera = cv2.VideoCapture(camera_index)
     if not camera.isOpened():
-        sys.exit(f"Could not open camera {args.camera}. Check camera permissions.")
+        sys.exit(f"Could not open camera {camera_index}. Check camera permissions.")
 
     calibration = Calibration()
     cv2.namedWindow(WINDOW)
@@ -99,6 +138,10 @@ def main():
         key = cv2.waitKey(1) & 0xFF
         if key == ord("n"):
             calibration.next_desk()
+        elif key == ord("s"):
+            save(calibration, args.settings)
+        elif key == ord("r"):
+            calibration.reset()
         elif key == ord("q"):
             break
 
