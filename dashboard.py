@@ -11,13 +11,14 @@ import time
 import cv2
 import numpy as np
 
-from desk_state import FREE, OCCUPIED
+from desk_state import FREE, OCCUPIED, RESERVED_EMPTY
 
 # ---- 1. Look and layout ----
 
 FONT = cv2.FONT_HERSHEY_DUPLEX
 BACKGROUND = (36, 30, 30)       # near-black (colors are Blue, Green, Red)
 WHITE = (255, 255, 255)
+DARK = (40, 34, 34)
 GREY = (170, 165, 160)
 
 CARD_WIDTH, CARD_HEIGHT = 420, 240
@@ -30,6 +31,7 @@ FOOTER = 50       # height of the privacy note at the bottom
 STYLES = {
     FREE:     {"color": (96, 174, 39),  "text": WHITE, "label": "Free"},
     OCCUPIED: {"color": (219, 152, 52), "text": WHITE, "label": "Occupied"},
+    RESERVED_EMPTY: {"color": (15, 196, 241), "text": DARK, "label": "Reserved - empty"},
 }
 UNKNOWN_STYLE = {"color": (90, 90, 90), "text": WHITE, "label": "..."}
 
@@ -71,7 +73,20 @@ def draw_card(canvas, x, y, desk_name, status):
     rounded_rectangle(canvas, x, y, CARD_WIDTH, CARD_HEIGHT, 18, style["color"])
 
     put_text(canvas, desk_name, (x + 24, y + 44), 0.8, style["text"], 1)
-    put_centered(canvas, style["label"], x, y + 140, 1.6, style["text"], 3)
+
+    if status and status.state == RESERVED_EMPTY:
+        # Reserved desks get a live timer: how long has the owner been gone?
+        put_centered(canvas, style["label"], x, y + 125, 1.2, style["text"], 2)
+        put_centered(canvas, format_duration(status.seconds_in_state), x, y + 185,
+                     1.4, style["text"], 3)
+    else:
+        put_centered(canvas, style["label"], x, y + 140, 1.6, style["text"], 3)
+
+
+def format_duration(seconds):
+    """Turn 125.4 seconds into '2m 05s'."""
+    minutes, seconds = divmod(int(seconds), 60)
+    return f"{minutes}m {seconds:02d}s"
 
 
 # ---- 4. Small drawing helpers ----
