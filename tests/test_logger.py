@@ -8,6 +8,8 @@ from datetime import datetime
 from logger import EventLogger, COLUMNS
 
 
+# ---- Tests ----
+
 def test_logs_one_row_per_state_change(tmp_path):
     log_path = tmp_path / "logs" / "events.csv"
     logger = EventLogger(log_path)
