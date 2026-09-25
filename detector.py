@@ -19,13 +19,15 @@ MODEL_FILE = "yolov8n.pt"   # small, fast model; downloads automatically the fir
 
 PERSON_CLASS = "person"
 # Anything in this list counts as "an item is on the desk". We don't care
-# which one it is - only that something was left behind.
+# which one it is - only that something was left behind. These are standard
+# YOLO (COCO) class names; override them with "item_classes" in settings.json
+# after testing with --check-items. (There is no "jacket" class in COCO.)
 ITEM_CLASSES = ["backpack", "handbag", "suitcase", "laptop", "book"]
 
 
 @dataclass
 class Detection:
-    label: str          # "person" or one of ITEM_CLASSES
+    label: str          # "person" or one of the item classes
     confidence: float   # 0.0 - 1.0, how sure YOLO is
     box: tuple          # (x1, y1, x2, y2) corners in pixels
 
@@ -44,14 +46,20 @@ class Detection:
 class DeskDetector:
     """Wraps YOLO so the rest of the app never touches raw model objects."""
 
-    def __init__(self, desks, confidence=0.25):
+    def __init__(self, desks, confidence=0.25, item_classes=ITEM_CLASSES):
         self.desks = desks
         self.confidence = confidence
+        self.item_classes = list(item_classes)
         self.model = YOLO(MODEL_FILE)
+
+        # Catch typos early: a misspelled class would silently never be detected.
+        unknown = set(self.item_classes) - set(self.model.names.values())
+        if unknown:
+            raise ValueError(f"Unknown item classes in settings: {sorted(unknown)}")
 
         # YOLO knows 80 classes by number. Look up the numbers for the few we want,
         # so YOLO skips everything else (faster, and no cups/chairs cluttering things up).
-        wanted = [PERSON_CLASS] + ITEM_CLASSES
+        wanted = [PERSON_CLASS] + self.item_classes
         self.class_ids = [class_id for class_id, name in self.model.names.items()
                           if name in wanted]
 

@@ -13,7 +13,7 @@ import time
 import cv2
 
 from config import load_settings, SettingsError, DEFAULT_SETTINGS_PATH
-from detector import DeskDetector, PERSON_CLASS, ITEM_CLASSES
+from detector import DeskDetector, PERSON_CLASS
 
 
 # ---- 1. Command line options ----
@@ -37,6 +37,10 @@ def open_camera(camera_index):
     return camera
 
 
+def make_detector(settings):
+    return DeskDetector(settings["desks"], settings["confidence"], settings["item_classes"])
+
+
 # ---- 3. --check-items: which classes can YOLO see reliably? ----
 
 def check_items(settings):
@@ -45,9 +49,9 @@ def check_items(settings):
     Use this before filming: hold up your bag/laptop and pick the items that
     score well above the confidence setting.
     """
-    detector = DeskDetector(settings["desks"], settings["confidence"])
+    detector = make_detector(settings)
     camera = open_camera(settings["camera_index"])
-    watched = [PERSON_CLASS] + ITEM_CLASSES
+    watched = [PERSON_CLASS] + detector.item_classes
     print(f"Watching for: {', '.join(watched)}  (confidence setting = {settings['confidence']})")
     print("Press Ctrl+C to stop.\n")
 

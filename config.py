@@ -18,6 +18,7 @@ DEFAULTS = {
     "confidence": 0.25,
     "smoothing_frames": 10,
     "long_reserved_minutes": 30,
+    "item_classes": ["backpack", "handbag", "suitcase", "laptop", "book"],
     "desks": [],
 }
 
