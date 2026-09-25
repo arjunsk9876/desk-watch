@@ -25,3 +25,41 @@ class DeskStatus:
     state: str                # FREE, OCCUPIED, or RESERVED_EMPTY
     seconds_in_state: float   # how long the desk has been in this state
     long: bool                # True once a desk has been reserved-but-empty too long
+
+
+# ---- 3. The rules: which state comes next? ----
+
+def next_state(state, person_present, item_present):
+    """Apply one row of the state table (see README) and return the new state."""
+    if state == FREE:
+        if person_present:
+            return OCCUPIED
+
+    return state
+
+
+# ---- 4. Keep track of every desk over time ----
+
+class DeskTracker:
+    """Remembers each desk's state between frames and times how long it has lasted."""
+
+    def __init__(self, smoothing_frames=10, long_reserved_minutes=30):
+        self.smoothing_frames = smoothing_frames
+        self.long_reserved_seconds = long_reserved_minutes * 60
+        self.desks = {}   # desk_id -> {"state": ..., "since": ...}
+
+    def update(self, desk_id, person_present, item_present, now):
+        """Feed in one frame's detections for one desk; get back its DeskStatus."""
+        # Every desk starts FREE the first time we see it.
+        desk = self.desks.setdefault(desk_id, {"state": FREE, "since": now})
+
+        new_state = next_state(desk["state"], person_present, item_present)
+        if new_state != desk["state"]:
+            desk["state"] = new_state
+            desk["since"] = now   # entering a new state restarts the timer
+
+        return DeskStatus(
+            state=desk["state"],
+            seconds_in_state=now - desk["since"],
+            long=False,
+        )
