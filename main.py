@@ -3,6 +3,7 @@ main.py - Starts desk-watch: reads the camera and shows the live desk dashboard.
 
 Run it:
   python main.py                   live dashboard
+  python main.py --debug           also show the camera view with boxes
   python main.py --check-items     print how confident YOLO is about each class
 """
 
@@ -13,10 +14,11 @@ import time
 import cv2
 
 DASHBOARD_WINDOW = "desk-watch dashboard"
+DEBUG_WINDOW = "desk-watch debug (camera - not for public display)"
 from config import load_settings, SettingsError, DEFAULT_SETTINGS_PATH
 from dashboard import draw_dashboard
 from desk_state import DeskTracker
-from detector import DeskDetector, PERSON_CLASS
+from detector import DeskDetector, PERSON_CLASS, draw_debug
 
 
 # ---- 1. Command line options ----
@@ -25,6 +27,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="desk-watch: is this seat taken?")
     parser.add_argument("--settings", default=DEFAULT_SETTINGS_PATH,
                         help="settings file to use (e.g. demo_settings.json)")
+    parser.add_argument("--debug", action="store_true",
+                        help="also show the raw camera view with desk zones and boxes")
     parser.add_argument("--check-items", action="store_true",
                         help="print detection confidence per class, then exit with Ctrl+C")
     return parser.parse_args()
@@ -82,7 +86,7 @@ def check_items(settings):
 
 # ---- 4. The live loop: camera -> detector -> desk states ----
 
-def run(settings):
+def run(settings, debug=False):
     detector = make_detector(settings)
     tracker = DeskTracker(settings["smoothing_frames"], settings["long_reserved_minutes"])
     camera = open_camera(settings["camera_index"])
@@ -116,6 +120,10 @@ def run(settings):
             # Step 4: show the public dashboard - status cards only, never the camera image.
             dashboard = draw_dashboard(settings["desks"], statuses, settings["long_reserved_minutes"])
             cv2.imshow(DASHBOARD_WINDOW, dashboard)
+
+            # Optional: the camera view with boxes, for building and testing only.
+            if debug:
+                cv2.imshow(DEBUG_WINDOW, draw_debug(frame, settings["desks"], detections))
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
     except KeyboardInterrupt:
@@ -140,7 +148,7 @@ def main():
     if not settings["desks"]:
         sys.exit("No desks in the settings file. Run 'python calibrate.py' first.")
 
-    run(settings)
+    run(settings, debug=args.debug)
 
 
 if __name__ == "__main__":

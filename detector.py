@@ -109,3 +109,34 @@ def point_in_zone(point, zone):
     contour = np.array(zone, dtype=np.float32)
     # pointPolygonTest returns +1 inside, 0 on the edge, -1 outside.
     return cv2.pointPolygonTest(contour, (float(point[0]), float(point[1])), False) >= 0
+
+
+# ---- 6. Debug view (for building/testing only, never the public dashboard) ----
+
+PERSON_BOX_COLOR = (219, 152, 52)   # blue
+ITEM_BOX_COLOR = (15, 196, 241)     # yellow
+ZONE_COLOR = (255, 255, 255)
+
+
+def draw_debug(frame, desks, detections):
+    """Draw desk zones and detection boxes on a COPY of the camera frame."""
+    view = frame.copy()
+    for desk in desks:
+        zone = np.array(desk["zone"], dtype=np.int32)
+        cv2.polylines(view, [zone], isClosed=True, color=ZONE_COLOR, thickness=2)
+        x, y = desk["zone"][0]
+        cv2.putText(view, desk["name"], (int(x) + 6, int(y) + 22),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, ZONE_COLOR, 2)
+
+    for detection in detections:
+        color = PERSON_BOX_COLOR if detection.is_person else ITEM_BOX_COLOR
+        # Items are shown only as "item" - desk-watch doesn't care what it is.
+        name = "person" if detection.is_person else "item"
+        x1, y1, x2, y2 = (int(value) for value in detection.box)
+        cv2.rectangle(view, (x1, y1), (x2, y2), color, 2)
+        cv2.putText(view, f"{name} {detection.confidence:.2f}", (x1, max(y1 - 6, 14)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        # The dot is the point that decides which desk a box belongs to.
+        center_x, center_y = (int(value) for value in detection.center)
+        cv2.circle(view, (center_x, center_y), 5, color, -1)
+    return view
