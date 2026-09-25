@@ -1,0 +1,7 @@
+# desk-watch dependencies
+# ultralytics: YOLO object detection (downloads yolov8n.pt on first run)
+# opencv-python: camera, drawing, and dashboard windows
+# pytest: runs the tests in tests/
+ultralytics>=8.0
+opencv-python>=4.8
+pytest>=7.0
