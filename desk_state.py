@@ -35,6 +35,10 @@ def next_state(state, person_present, item_present):
         if person_present:
             return OCCUPIED
 
+    elif state == OCCUPIED:
+        if not person_present and not item_present:
+            return FREE          # they left and took everything with them
+
     return state
 
 
