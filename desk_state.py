@@ -41,6 +41,10 @@ def next_state(state, person_present, item_present):
         if not person_present and item_present:
             return RESERVED_EMPTY   # they left, but their stuff is still here
 
+    elif state == RESERVED_EMPTY:
+        if person_present:
+            return OCCUPIED      # they came back
+
     return state
 
 
