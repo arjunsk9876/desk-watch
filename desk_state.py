@@ -70,8 +70,11 @@ class DeskTracker:
             desk["state"] = new_state
             desk["since"] = now   # entering a new state restarts the timer
 
-        return DeskStatus(
-            state=desk["state"],
-            seconds_in_state=now - desk["since"],
-            long=False,
-        )
+        seconds_in_state = now - desk["since"]
+
+        # A desk stays RESERVED_EMPTY forever unless someone acts, but after
+        # long_reserved_minutes we flag it so the dashboard can say "fair game".
+        is_long = (desk["state"] == RESERVED_EMPTY
+                   and seconds_in_state >= self.long_reserved_seconds)
+
+        return DeskStatus(desk["state"], seconds_in_state, is_long)
