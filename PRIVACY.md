@@ -34,5 +34,7 @@ That's it. No pictures, no names, no descriptions of people.
 
 ## How to check this yourself
 
+- Run `pytest tests/test_privacy.py`. It checks the code itself: no file saves images, only
+  `main.py`'s `--record` path can write video, and no image files exist in the project folder.
 - After a normal run (without `--record`), look in the project folder: the only new file
   is `logs/events.csv`.
