@@ -22,11 +22,24 @@ DEFAULTS = {
 }
 
 
+class SettingsError(Exception):
+    """Raised when the settings file is missing or unusable."""
+
+
 # ---- 1. Load settings ----
 
 def load_settings(path=DEFAULT_SETTINGS_PATH):
     """Read the settings file and fill in defaults for anything missing."""
     path = Path(path)
+
+    # A missing file almost always means calibration hasn't been done yet,
+    # so tell the user exactly what to run instead of showing a stack trace.
+    if not path.exists():
+        raise SettingsError(
+            f"Could not find '{path}'. "
+            "Run 'python calibrate.py' first to draw your desk zones."
+        )
+
     with open(path) as settings_file:
         loaded = json.load(settings_file)
 

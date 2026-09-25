@@ -4,7 +4,9 @@ test_config.py - Checks that config.py reads settings files correctly.
 
 import json
 
-from config import load_settings
+import pytest
+
+from config import load_settings, SettingsError
 
 
 # ---- Helpers ----
@@ -44,3 +46,8 @@ def test_missing_fields_use_defaults(tmp_path):
     assert settings["smoothing_frames"] == 10
     assert settings["long_reserved_minutes"] == 30
     assert settings["confidence"] == 0.25
+
+
+def test_missing_file_tells_user_to_calibrate(tmp_path):
+    with pytest.raises(SettingsError, match="calibrate.py"):
+        load_settings(tmp_path / "does_not_exist.json")
