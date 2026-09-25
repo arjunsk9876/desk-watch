@@ -4,6 +4,7 @@ main.py - Starts desk-watch: reads the camera and shows the live desk dashboard.
 Run it:
   python main.py                   live dashboard
   python main.py --debug           also show the camera view with boxes
+  python main.py --record out.mp4  DEMO ONLY: save the debug view to a video file
   python main.py --check-items     print how confident YOLO is about each class
 """
 
@@ -30,6 +31,8 @@ def parse_args():
                         help="settings file to use (e.g. demo_settings.json)")
     parser.add_argument("--debug", action="store_true",
                         help="also show the raw camera view with desk zones and boxes")
+    parser.add_argument("--record", metavar="FILE",
+                        help="DEMO ONLY: record the debug view to a video file (e.g. out.mp4)")
     parser.add_argument("--check-items", action="store_true",
                         help="print detection confidence per class, then exit with Ctrl+C")
     return parser.parse_args()
@@ -87,11 +90,21 @@ def check_items(settings):
 
 # ---- 4. The live loop: camera -> detector -> desk states ----
 
-def run(settings, debug=False):
+def start_recording(path, frame_size, fps=15):
+    """DEMO ONLY: open a video file for the debug view. The product itself never records."""
+    print("\n" + "!" * 70)
+    print(f"  WARNING: --record is ON. Saving the camera view to {path}.")
+    print("  This is only for making the demo video - normal use saves no video or images.")
+    print("!" * 70 + "\n")
+    return cv2.VideoWriter(path, cv2.VideoWriter_fourcc(*"mp4v"), fps, frame_size)
+
+
+def run(settings, debug=False, record_path=None):
     detector = make_detector(settings)
     tracker = DeskTracker(settings["smoothing_frames"], settings["long_reserved_minutes"])
     camera = open_camera(settings["camera_index"])
     logger = EventLogger()
+    recorder = None   # only created when --record is used
     last_states = {}   # desk_id -> state last frame, so we can spot changes
 
     print("desk-watch running. Press q in the window (or Ctrl+C) to quit.")
@@ -125,14 +138,23 @@ def run(settings, debug=False):
             cv2.imshow(DASHBOARD_WINDOW, dashboard)
 
             # Optional: the camera view with boxes, for building and testing only.
-            if debug:
-                cv2.imshow(DEBUG_WINDOW, draw_debug(frame, settings["desks"], detections))
+            if debug or record_path:
+                debug_view = draw_debug(frame, settings["desks"], detections)
+                cv2.imshow(DEBUG_WINDOW, debug_view)
+                if record_path:
+                    if recorder is None:
+                        height, width = debug_view.shape[:2]
+                        recorder = start_recording(record_path, (width, height))
+                    recorder.write(debug_view)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
     except KeyboardInterrupt:
         pass
     finally:
         camera.release()
+        if recorder is not None:
+            recorder.release()
+            print(f"Recording saved to {record_path}")
         cv2.destroyAllWindows()
 
 
@@ -151,7 +173,7 @@ def main():
     if not settings["desks"]:
         sys.exit("No desks in the settings file. Run 'python calibrate.py' first.")
 
-    run(settings, debug=args.debug)
+    run(settings, debug=args.debug, record_path=args.record)
 
 
 if __name__ == "__main__":
