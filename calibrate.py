@@ -128,10 +128,15 @@ def main():
     cv2.namedWindow(WINDOW)
     cv2.setMouseCallback(WINDOW, calibration.on_click)
 
+    failed_reads = 0
     while True:
         ok, frame = camera.read()
         if not ok:
+            failed_reads += 1
+            if failed_reads > 50:
+                sys.exit("The camera stopped sending frames. Is another app using it?")
             continue
+        failed_reads = 0
         draw(frame, calibration)
         cv2.imshow(WINDOW, frame)
 

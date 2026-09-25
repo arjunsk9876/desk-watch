@@ -26,6 +26,7 @@ from logger import EventLogger
 
 DASHBOARD_WINDOW = "desk-watch dashboard"
 DEBUG_WINDOW = "desk-watch debug (camera - not for public display)"
+MAX_FAILED_READS = 50   # about 1 second of the camera sending nothing
 
 
 # ---- 1. Command line options ----
@@ -53,8 +54,21 @@ def open_camera(camera_index):
     return camera
 
 
+def read_frame(camera):
+    """Get the next frame, or stop with a clear message if the camera goes silent."""
+    for _ in range(MAX_FAILED_READS):
+        ok, frame = camera.read()
+        if ok:
+            return frame
+        time.sleep(0.02)
+    sys.exit("The camera stopped sending frames. Is another app using it?")
+
+
 def make_detector(settings):
-    return DeskDetector(settings["desks"], settings["confidence"], settings["item_classes"])
+    try:
+        return DeskDetector(settings["desks"], settings["confidence"], settings["item_classes"])
+    except ValueError as error:   # e.g. a misspelled item class in settings.json
+        sys.exit(str(error))
 
 
 # ---- 3. --check-items: which classes can YOLO see reliably? ----
@@ -75,9 +89,7 @@ def check_items(settings):
     last_print = time.time()
     try:
         while True:
-            ok, frame = camera.read()
-            if not ok:
-                continue
+            frame = read_frame(camera)
             # Use a very low threshold here so we can see weak detections too.
             for detection in detector.detect(frame, confidence=0.05):
                 best[detection.label] = max(best[detection.label], detection.confidence)
@@ -132,9 +144,7 @@ def run(settings, debug=False, record_path=None):
     print("desk-watch running. Press q in a window (or Ctrl+C) to quit.")
     try:
         while True:
-            ok, frame = camera.read()
-            if not ok:
-                continue
+            frame = read_frame(camera)
             detections, statuses = update_desks(settings, detector, tracker, frame)
 
             # Step 4: log every state change (desk, states, time - nothing else).
