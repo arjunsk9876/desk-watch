@@ -106,7 +106,7 @@ Every frame from the camera goes through four steps:
 | `confidence` | 0.25 | how sure YOLO must be before a person counts |
 | `item_confidence` | 0.15 | same, for items (lower, because small items are harder to see) |
 | `smoothing_frames` | 10 | frames used for the anti-flicker vote |
-| `long_reserved_minutes` | 60 | when a reserved-but-empty desk becomes "available" (0.5 in `demo_settings.json`) |
+| `long_reserved_minutes` | 60 | when a reserved-but-empty desk becomes "available" (0.25 = 15 seconds in `demo_settings.json`) |
 | `item_classes` | backpack, laptop, cell phone, book, bottle, cup | YOLO classes that count as "an item" |
 
 ## Privacy

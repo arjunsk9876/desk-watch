@@ -2,7 +2,7 @@
   "camera_index": 0,
   "confidence": 0.25,
   "smoothing_frames": 8,
-  "long_reserved_minutes": 0.5,
+  "long_reserved_minutes": 0.25,
   "item_classes": [
     "backpack",
     "cell phone",
