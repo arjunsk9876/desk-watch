@@ -55,7 +55,7 @@ def mostly_true(history):
 class DeskTracker:
     """Remembers each desk's state between frames and times how long it has lasted."""
 
-    def __init__(self, smoothing_frames=10, long_reserved_minutes=30):
+    def __init__(self, smoothing_frames=10, long_reserved_minutes=60):
         self.smoothing_frames = smoothing_frames
         self.long_reserved_seconds = long_reserved_minutes * 60
         self.desks = {}   # desk_id -> its state, timer start, and recent detections

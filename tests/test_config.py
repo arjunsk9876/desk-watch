@@ -44,7 +44,7 @@ def test_missing_fields_use_defaults(tmp_path):
     settings = load_settings(path)
 
     assert settings["smoothing_frames"] == 10
-    assert settings["long_reserved_minutes"] == 30
+    assert settings["long_reserved_minutes"] == 60
     assert settings["confidence"] == 0.25
 
 

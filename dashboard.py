@@ -40,7 +40,7 @@ UNKNOWN_STYLE = {"color": (90, 90, 90), "text": WHITE, "label": "..."}
 
 # ---- 2. Draw the whole dashboard ----
 
-def draw_dashboard(desks, statuses, long_reserved_minutes=30):
+def draw_dashboard(desks, statuses, long_reserved_minutes=60):
     """Return an image with one card per desk. `statuses` maps desk_id -> DeskStatus."""
     columns = 1 if len(desks) == 1 else 2
     rows = math.ceil(len(desks) / columns)
@@ -102,7 +102,9 @@ def format_duration(seconds):
 
 
 def format_limit(minutes):
-    """30 -> '30+ min', 0.5 -> '30+ sec' (demo settings use very short limits)."""
+    """60 -> '1+ hr', 30 -> '30+ min', 0.5 -> '30+ sec' (demo settings use very short limits)."""
+    if minutes >= 60 and minutes % 60 == 0:
+        return f"{minutes // 60:g}+ hr"
     if minutes >= 1:
         return f"{minutes:g}+ min"
     return f"{round(minutes * 60)}+ sec"

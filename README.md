@@ -92,7 +92,7 @@ Every frame from the camera goes through four steps:
 | Green - Free | nothing there |
 | Blue - Occupied | someone is sitting there |
 | Yellow - Reserved, empty 2m 05s | their stuff is there, they are not (live timer) |
-| Red-orange - Empty 30+ min, Available | left too long - fair game |
+| Red-orange - Empty 1+ hr, Available | left too long - fair game |
 
 `desk_state.py` has no camera or AI code at all, so it can be tested with made-up inputs
 (see `tests/test_desk_state.py`).
@@ -106,7 +106,7 @@ Every frame from the camera goes through four steps:
 | `confidence` | 0.25 | how sure YOLO must be before a person counts |
 | `item_confidence` | 0.15 | same, for items (lower, because small items are harder to see) |
 | `smoothing_frames` | 10 | frames used for the anti-flicker vote |
-| `long_reserved_minutes` | 30 | when a reserved-but-empty desk becomes "available" (0.5 in `demo_settings.json`) |
+| `long_reserved_minutes` | 60 | when a reserved-but-empty desk becomes "available" (0.5 in `demo_settings.json`) |
 | `item_classes` | backpack, laptop, cell phone, book, bottle, cup | YOLO classes that count as "an item" |
 
 ## Privacy
