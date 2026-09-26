@@ -1,6 +1,7 @@
 {
   "camera_index": 0,
   "confidence": 0.25,
+  "item_confidence": 0.15,
   "smoothing_frames": 8,
   "long_reserved_minutes": 0.25,
   "item_classes": [
@@ -16,20 +17,20 @@
       "name": "Desk 1",
       "zone": [
         [
-          478,
-          437
+          378,
+          588
         ],
         [
-          1678,
-          361
+          1630,
+          509
         ],
         [
-          1862,
-          1020
+          1815,
+          979
         ],
         [
-          92,
-          1058
+          168,
+          1059
         ]
       ]
     }
