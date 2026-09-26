@@ -5,10 +5,10 @@
   "long_reserved_minutes": 0.5,
   "item_classes": [
     "backpack",
-    "handbag",
-    "suitcase",
-    "laptop",
-    "book"
+    "cell phone",
+    "book",
+    "bottle",
+    "cup"
   ],
   "desks": [
     {
@@ -16,42 +16,20 @@
       "name": "Desk 1",
       "zone": [
         [
-          40,
-          200
+          478,
+          437
         ],
         [
-          300,
-          200
+          1678,
+          361
         ],
         [
-          300,
-          460
+          1862,
+          1020
         ],
         [
-          40,
-          460
-        ]
-      ]
-    },
-    {
-      "id": "desk_2",
-      "name": "Desk 2",
-      "zone": [
-        [
-          340,
-          200
-        ],
-        [
-          600,
-          200
-        ],
-        [
-          600,
-          460
-        ],
-        [
-          340,
-          460
+          92,
+          1058
         ]
       ]
     }
