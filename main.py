@@ -66,7 +66,8 @@ def read_frame(camera):
 
 def make_detector(settings):
     try:
-        return DeskDetector(settings["desks"], settings["confidence"], settings["item_classes"])
+        return DeskDetector(settings["desks"], settings["confidence"],
+                            settings["item_classes"], settings["item_confidence"])
     except ValueError as error:   # e.g. a misspelled item class in settings.json
         sys.exit(str(error))
 
@@ -82,7 +83,8 @@ def check_items(settings):
     detector = make_detector(settings)
     camera = open_camera(settings["camera_index"])
     watched = [PERSON_CLASS] + detector.item_classes
-    print(f"Watching for: {', '.join(watched)}  (confidence setting = {settings['confidence']})")
+    print(f"Watching for: {', '.join(watched)}  (person needs {settings['confidence']}, "
+          f"items need {settings['item_confidence']})")
     print("Press Ctrl+C to stop.\n")
 
     best = {label: 0.0 for label in watched}

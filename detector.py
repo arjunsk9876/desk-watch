@@ -46,9 +46,10 @@ class Detection:
 class DeskDetector:
     """Wraps YOLO so the rest of the app never touches raw model objects."""
 
-    def __init__(self, desks, confidence=0.25, item_classes=ITEM_CLASSES):
+    def __init__(self, desks, confidence=0.25, item_classes=ITEM_CLASSES, item_confidence=0.15):
         self.desks = desks
-        self.confidence = confidence
+        self.confidence = confidence              # how sure YOLO must be about a person
+        self.item_confidence = item_confidence    # items are small and harder to see, so allow lower
         self.item_classes = list(item_classes)
         self.model = YOLO(MODEL_FILE)
 
@@ -66,20 +67,23 @@ class DeskDetector:
     # ---- 3. Find people and items in one frame ----
 
     def detect(self, frame, confidence=None):
-        """Run YOLO on one frame and return a plain list of Detections."""
-        results = self.model.predict(
-            frame,
-            conf=confidence if confidence is not None else self.confidence,
-            classes=self.class_ids,
-            verbose=False,
-        )[0]
+        """Run YOLO on one frame and return a plain list of Detections.
+
+        Passing `confidence` uses one threshold for everything (for --check-items).
+        """
+        lowest = confidence if confidence is not None else min(self.confidence, self.item_confidence)
+        results = self.model.predict(frame, conf=lowest, classes=self.class_ids, verbose=False)[0]
 
         detections = []
         for box in results.boxes:
             label = self.model.names[int(box.cls)]
+            score = float(box.conf)
+            # People must still pass the stricter person threshold.
+            if confidence is None and label == PERSON_CLASS and score < self.confidence:
+                continue
             detections.append(Detection(
                 label=label,
-                confidence=float(box.conf),
+                confidence=score,
                 box=tuple(float(value) for value in box.xyxy[0]),
             ))
         return detections
