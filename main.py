@@ -21,7 +21,7 @@ import cv2
 from config import load_settings, SettingsError, DEFAULT_SETTINGS_PATH
 from dashboard import draw_dashboard
 from desk_state import DeskTracker
-from detector import DeskDetector, PERSON_CLASS, draw_debug
+from detector import DeskDetector, PERSON_CLASS, draw_debug, describe_desk
 from logger import EventLogger
 
 DASHBOARD_WINDOW = "desk-watch dashboard"
@@ -139,6 +139,7 @@ def run(settings, debug=False, record_path=None):
     camera = open_camera(settings["camera_index"])
     logger = EventLogger()
     recorder = None    # only created when --record is used
+    last_debug_print = 0
     last_states = {}   # desk_id -> state last frame, so we can spot changes
 
     print("desk-watch running. Press q in a window (or Ctrl+C) to quit.")
@@ -161,7 +162,11 @@ def run(settings, debug=False, record_path=None):
 
             # Optional: the camera view with boxes, for building and testing only.
             if debug or record_path:
-                debug_view = draw_debug(frame, settings["desks"], detections)
+                debug_view = draw_debug(frame, settings["desks"], detections, statuses)
+                if time.time() - last_debug_print >= 1:   # confidences once a second
+                    for desk in settings["desks"]:
+                        print("  " + describe_desk(desk, detections, statuses[desk["id"]]))
+                    last_debug_print = time.time()
                 cv2.imshow(DEBUG_WINDOW, debug_view)
                 if record_path:
                     if recorder is None:

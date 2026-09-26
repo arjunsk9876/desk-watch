@@ -111,6 +111,23 @@ def point_in_zone(point, zone):
     return cv2.pointPolygonTest(contour, (float(point[0]), float(point[1])), False) >= 0
 
 
+def best_in_zone(detections, zone):
+    """The most confident person and item inside a zone, or None (for the debug view)."""
+    in_zone = [d for d in detections if point_in_zone(d.center, zone)]
+    person = max((d for d in in_zone if d.is_person), key=lambda d: d.confidence, default=None)
+    item = max((d for d in in_zone if not d.is_person), key=lambda d: d.confidence, default=None)
+    return person, item
+
+
+def describe_desk(desk, detections, status=None):
+    """One line like 'Desk 1: OCCUPIED  person 0.82  item 0.41 (backpack)'."""
+    person, item = best_in_zone(detections, desk["zone"])
+    state = f": {status.state}" if status else ""
+    person_text = f"person {person.confidence:.2f}" if person else "person --"
+    item_text = f"item {item.confidence:.2f} ({item.label})" if item else "item --"
+    return f"{desk['name']}{state}  {person_text}  {item_text}"
+
+
 # ---- 6. Debug view (for building/testing only, never the public dashboard) ----
 
 PERSON_BOX_COLOR = (219, 152, 52)   # blue
@@ -118,8 +135,8 @@ ITEM_BOX_COLOR = (15, 196, 241)     # yellow
 ZONE_COLOR = (255, 255, 255)
 
 
-def draw_debug(frame, desks, detections):
-    """Draw desk zones and detection boxes on a COPY of the camera frame."""
+def draw_debug(frame, desks, detections, statuses=None):
+    """Draw desk zones, detection boxes, and confidences on a COPY of the camera frame."""
     view = frame.copy()
     for desk in desks:
         zone = np.array(desk["zone"], dtype=np.int32)
@@ -130,8 +147,8 @@ def draw_debug(frame, desks, detections):
 
     for detection in detections:
         color = PERSON_BOX_COLOR if detection.is_person else ITEM_BOX_COLOR
-        # Items are shown only as "item" - desk-watch doesn't care what it is.
-        name = "person" if detection.is_person else "item"
+        # The class name is shown here only to help tune item_classes.
+        name = "person" if detection.is_person else f"item ({detection.label})"
         x1, y1, x2, y2 = (int(value) for value in detection.box)
         cv2.rectangle(view, (x1, y1), (x2, y2), color, 2)
         cv2.putText(view, f"{name} {detection.confidence:.2f}", (x1, max(y1 - 6, 14)),
@@ -139,4 +156,13 @@ def draw_debug(frame, desks, detections):
         # The dot is the point that decides which desk a box belongs to.
         center_x, center_y = (int(value) for value in detection.center)
         cv2.circle(view, (center_x, center_y), 5, color, -1)
+
+    # Summary panel in the top-left corner: each desk's state and best confidences.
+    statuses = statuses or {}
+    for row, desk in enumerate(desks):
+        line = describe_desk(desk, detections, statuses.get(desk["id"]))
+        y = 30 + row * 32
+        text_width = cv2.getTextSize(line, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0][0]
+        cv2.rectangle(view, (0, y - 24), (text_width + 20, y + 8), (30, 30, 30), -1)
+        cv2.putText(view, line, (10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, ZONE_COLOR, 2)
     return view
