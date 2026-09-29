@@ -1,14 +1,10 @@
-"""
-test_logger.py - Checks the event log holds only timestamps, desk ids, and states.
-"""
+"""Tests for logger.py - log should only have time, desk and states."""
 
 import csv
 from datetime import datetime
 
 from logger import EventLogger, COLUMNS
 
-
-# ---- Tests ----
 
 def test_logs_one_row_per_state_change(tmp_path):
     log_path = tmp_path / "logs" / "events.csv"
@@ -21,4 +17,4 @@ def test_logs_one_row_per_state_change(tmp_path):
     assert rows[0] == COLUMNS
     assert rows[1] == ["2026-09-25T20:00:00", "desk_1", "FREE", "OCCUPIED"]
     assert rows[2] == ["2026-09-25T20:05:00", "desk_1", "OCCUPIED", "RESERVED_EMPTY"]
-    assert all(len(row) == 4 for row in rows)   # nothing else sneaks in
+    assert all(len(row) == 4 for row in rows)   # no extra columns

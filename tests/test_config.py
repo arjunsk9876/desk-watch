@@ -1,6 +1,4 @@
-"""
-test_config.py - Checks that config.py reads settings files correctly.
-"""
+"""Tests for config.py."""
 
 import json
 
@@ -9,16 +7,11 @@ import pytest
 from config import load_settings, SettingsError
 
 
-# ---- Helpers ----
-
 def write_settings(folder, data):
-    """Save a settings dict as JSON in a temporary folder and return its path."""
     path = folder / "settings.json"
     path.write_text(json.dumps(data))
     return path
 
-
-# ---- Tests ----
 
 def test_loads_two_desks(tmp_path):
     path = write_settings(tmp_path, {

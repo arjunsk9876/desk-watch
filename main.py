@@ -1,15 +1,12 @@
-"""
-main.py - Starts desk-watch: reads the camera and shows the live desk dashboard.
+"""desk-watch - reads the camera and shows the desk dashboard.
 
-Each frame goes: camera -> detector.py (people/items per desk)
--> desk_state.py (FREE / OCCUPIED / RESERVED_EMPTY) -> dashboard.py + logger.py.
+camera -> detector -> desk_state -> dashboard + logger
 
-Run it:
-  python main.py                   live dashboard
-  python main.py --debug           also show the camera view with boxes
-  python main.py --record out.mp4  DEMO ONLY: save the debug view to a video file
-  python main.py --check-items     print how confident YOLO is about each class
-  python main.py --settings demo_settings.json   use short timers for filming
+  python main.py                   dashboard
+  python main.py --debug           also show camera view with boxes
+  python main.py --record out.mp4  record the debug view (demo video only)
+  python main.py --check-items     print YOLO confidence for each class
+  python main.py --settings demo_settings.json   short timers for filming
 """
 
 import argparse
@@ -26,10 +23,8 @@ from logger import EventLogger
 
 DASHBOARD_WINDOW = "desk-watch dashboard"
 DEBUG_WINDOW = "desk-watch debug (camera - not for public display)"
-MAX_FAILED_READS = 50   # about 1 second of the camera sending nothing
+MAX_FAILED_READS = 50   # ~1 sec
 
-
-# ---- 1. Command line options ----
 
 def parse_args():
     parser = argparse.ArgumentParser(description="desk-watch: is this seat taken?")
@@ -44,8 +39,6 @@ def parse_args():
     return parser.parse_args()
 
 
-# ---- 2. Camera and detector setup ----
-
 def open_camera(camera_index):
     camera = cv2.VideoCapture(camera_index)
     if not camera.isOpened():
@@ -55,7 +48,6 @@ def open_camera(camera_index):
 
 
 def read_frame(camera):
-    """Get the next frame, or stop with a clear message if the camera goes silent."""
     for _ in range(MAX_FAILED_READS):
         ok, frame = camera.read()
         if ok:
@@ -68,18 +60,13 @@ def make_detector(settings):
     try:
         return DeskDetector(settings["desks"], settings["confidence"],
                             settings["item_classes"], settings["item_confidence"])
-    except ValueError as error:   # e.g. a misspelled item class in settings.json
+    except ValueError as error:   # bad item class name in settings
         sys.exit(str(error))
 
 
-# ---- 3. --check-items: which classes can YOLO see reliably? ----
-
 def check_items(settings):
-    """Every 2 seconds, print the best confidence YOLO found for each class.
-
-    Use this before filming: hold up your bag/laptop and pick the items that
-    score well above the confidence setting.
-    """
+    # prints the best score per class every 2 sec. hold stuff up to the
+    # camera and keep the classes that score well above the threshold
     detector = make_detector(settings)
     camera = open_camera(settings["camera_index"])
     watched = [PERSON_CLASS] + detector.item_classes
@@ -92,7 +79,7 @@ def check_items(settings):
     try:
         while True:
             frame = read_frame(camera)
-            # Use a very low threshold here so we can see weak detections too.
+            # really low threshold so weak detections show up too
             for detection in detector.detect(frame, confidence=0.05):
                 best[detection.label] = max(best[detection.label], detection.confidence)
 
@@ -107,10 +94,8 @@ def check_items(settings):
         camera.release()
 
 
-# ---- 4. --record: DEMO ONLY, never part of normal use ----
-
 def start_recording(path, frame_size, fps=15):
-    """Open a video file for the debug view. The product itself never records."""
+    # only used for the demo video. normal runs never save video
     print("\n" + "!" * 70)
     print(f"  WARNING: --record is ON. Saving the camera view to {path}.")
     print("  This is only for making the demo video - normal use saves no video or images.")
@@ -118,16 +103,10 @@ def start_recording(path, frame_size, fps=15):
     return cv2.VideoWriter(path, cv2.VideoWriter_fourcc(*"mp4v"), fps, frame_size)
 
 
-# ---- 5. The live loop: camera -> detector -> desk states -> dashboard ----
-
 def update_desks(settings, detector, tracker, frame):
-    """Run one frame through the pipeline. Returns (detections, {desk_id: DeskStatus})."""
     now = time.time()
-    # Step 1: YOLO finds people and items in the frame.
     detections = detector.detect(frame)
-    # Step 2: turn boxes into "person yes/no, item yes/no" for each desk.
     desk_answers = detector.check_desks(detections)
-    # Step 3: update each desk's state machine.
     statuses = {}
     for desk in settings["desks"]:
         answer = desk_answers[desk["id"]]
@@ -140,9 +119,9 @@ def run(settings, debug=False, record_path=None):
     tracker = DeskTracker(settings["smoothing_frames"], settings["long_reserved_minutes"])
     camera = open_camera(settings["camera_index"])
     logger = EventLogger()
-    recorder = None    # only created when --record is used
+    recorder = None
     last_debug_print = 0
-    last_states = {}   # desk_id -> state last frame, so we can spot changes
+    last_states = {}
 
     print("desk-watch running. Press q in a window (or Ctrl+C) to quit.")
     try:
@@ -150,7 +129,6 @@ def run(settings, debug=False, record_path=None):
             frame = read_frame(camera)
             detections, statuses = update_desks(settings, detector, tracker, frame)
 
-            # Step 4: log every state change (desk, states, time - nothing else).
             for desk_id, status in statuses.items():
                 old_state = last_states.get(desk_id)
                 if old_state is not None and old_state != status.state:
@@ -158,14 +136,13 @@ def run(settings, debug=False, record_path=None):
                     logger.log(desk_id, old_state, status.state)
                 last_states[desk_id] = status.state
 
-            # Step 5: show the public dashboard - status cards only, never the camera image.
+            # dashboard only gets the statuses, never the frame
             dashboard = draw_dashboard(settings["desks"], statuses, settings["long_reserved_minutes"])
             cv2.imshow(DASHBOARD_WINDOW, dashboard)
 
-            # Optional: the camera view with boxes, for building and testing only.
             if debug or record_path:
                 debug_view = draw_debug(frame, settings["desks"], detections, statuses)
-                if time.time() - last_debug_print >= 1:   # confidences once a second
+                if time.time() - last_debug_print >= 1:
                     for desk in settings["desks"]:
                         print("  " + describe_desk(desk, detections, statuses[desk["id"]]))
                     last_debug_print = time.time()
@@ -187,8 +164,6 @@ def run(settings, debug=False, record_path=None):
             print(f"Recording saved to {record_path}")
         cv2.destroyAllWindows()
 
-
-# ---- 6. Start here ----
 
 def main():
     args = parse_args()

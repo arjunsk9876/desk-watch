@@ -1,22 +1,13 @@
-"""
-test_desk_state.py - Tests the 3-state machine with fake detections and fake times.
-
-No camera or AI model is needed: we just tell the tracker "person yes/no,
-item yes/no, time = X seconds" and check which state it lands in.
-"""
+"""Tests for the desk state machine. Uses fake detections and fake times, no camera."""
 
 from desk_state import DeskTracker, FREE, OCCUPIED, RESERVED_EMPTY
 
 
-# ---- Helpers ----
-
 def make_tracker(**options):
-    """A tracker with smoothing turned off, so each frame counts on its own."""
+    # smoothing off so every frame counts
     options.setdefault("smoothing_frames", 1)
     return DeskTracker(**options)
 
-
-# ---- Normal transitions ----
 
 def test_person_sits_at_free_desk():
     tracker = make_tracker()
@@ -70,7 +61,7 @@ def test_item_removed_while_reserved():
 
 
 def test_item_alone_on_free_desk_stays_free():
-    # Nobody "reserved" it - an item with no owner seen stays FREE.
+    # nobody sat there first, so it was never reserved
     tracker = make_tracker()
 
     status = tracker.update("desk_1", person_present=False, item_present=True, now=0)
@@ -86,8 +77,6 @@ def test_desks_are_tracked_separately():
 
     assert status.state == FREE
 
-
-# ---- Long reserved flag ----
 
 def test_reserved_too_long_gets_flagged():
     tracker = make_tracker(long_reserved_minutes=2)
@@ -114,15 +103,13 @@ def test_coming_back_clears_long_flag():
     assert status.long is False
 
 
-# ---- Flicker smoothing ----
-
 def test_person_in_3_of_10_frames_is_not_present():
     tracker = DeskTracker(smoothing_frames=10)
     frames = [True, False, False, True, False, False, False, True, False, False]
 
     for frame_number, person_seen in enumerate(frames):
         status = tracker.update("desk_1", person_seen, item_present=False, now=frame_number)
-        assert status.state == FREE   # never flips to OCCUPIED, not even for one frame
+        assert status.state == FREE   # not even for one frame
 
 
 def test_person_in_6_of_10_frames_is_present():
@@ -140,7 +127,7 @@ def test_two_missed_frames_do_not_end_occupied():
     for frame_number in range(10):
         tracker.update("desk_1", person_present=True, item_present=True, now=frame_number)
 
-    # The detector misses the person for two frames in a row.
+    # YOLO misses them for 2 frames
     tracker.update("desk_1", person_present=False, item_present=True, now=10)
     status = tracker.update("desk_1", person_present=False, item_present=True, now=11)
 

@@ -1,8 +1,6 @@
-"""
-dashboard.py - Draws the shared status screen: one colored card per desk.
+"""The shared screen - one colored card per desk.
 
-This is what students or staff would see on a shared screen. On purpose,
-it contains NO camera image - only each desk's name, state, and timer.
+No camera image on here, just desk name, state and timer.
 """
 
 import math
@@ -13,35 +11,29 @@ import numpy as np
 
 from desk_state import FREE, OCCUPIED, RESERVED_EMPTY
 
-# ---- 1. Look and layout ----
-
 FONT = cv2.FONT_HERSHEY_DUPLEX
-BACKGROUND = (36, 30, 30)       # near-black (colors are Blue, Green, Red)
+BACKGROUND = (36, 30, 30)   # BGR
 WHITE = (255, 255, 255)
 DARK = (40, 34, 34)
 GREY = (170, 165, 160)
 
 CARD_WIDTH, CARD_HEIGHT = 420, 240
-GAP = 24          # space between cards
-MARGIN = 32       # space around the edge of the window
-HEADER = 110      # height of the title area
-FOOTER = 50       # height of the privacy note at the bottom
+GAP = 24
+MARGIN = 32
+HEADER = 110
+FOOTER = 50
 
-# Card color and text for each state.
 STYLES = {
     FREE:     {"color": (96, 174, 39),  "text": WHITE, "label": "Free"},
     OCCUPIED: {"color": (219, 152, 52), "text": WHITE, "label": "Occupied"},
     RESERVED_EMPTY: {"color": (15, 196, 241), "text": DARK, "label": "Reserved - empty"},
 }
-# Reserved-but-empty for longer than long_reserved_minutes: fair game.
+# reserved too long = up for grabs
 LONG_STYLE = {"color": (34, 87, 230), "text": WHITE, "label": "Available"}
 UNKNOWN_STYLE = {"color": (90, 90, 90), "text": WHITE, "label": "..."}
 
 
-# ---- 2. Draw the whole dashboard ----
-
 def draw_dashboard(desks, statuses, long_reserved_minutes=60):
-    """Return an image with one card per desk. `statuses` maps desk_id -> DeskStatus."""
     columns = 1 if len(desks) == 1 else 2
     rows = math.ceil(len(desks) / columns)
     width = MARGIN * 2 + columns * CARD_WIDTH + (columns - 1) * GAP
@@ -68,8 +60,6 @@ def draw_header(canvas):
     put_text(canvas, clock, (canvas.shape[1] - MARGIN - clock_width, 52), 1.0, GREY, 2)
 
 
-# ---- 3. Draw one desk card ----
-
 def draw_card(canvas, x, y, desk_name, status, long_reserved_minutes):
     if status is None:
         style = UNKNOWN_STYLE
@@ -82,12 +72,11 @@ def draw_card(canvas, x, y, desk_name, status, long_reserved_minutes):
     put_text(canvas, desk_name, (x + 24, y + 44), 0.8, style["text"], 1)
 
     if status and status.long:
-        # Left empty too long: tell people they can take it.
         empty_for = f"Empty {format_limit(long_reserved_minutes)}"
         put_centered(canvas, empty_for, x, y + 125, 1.2, style["text"], 2)
         put_centered(canvas, style["label"], x, y + 185, 1.6, style["text"], 3)
     elif status and status.state == RESERVED_EMPTY:
-        # Reserved desks get a live timer: how long has the owner been gone?
+        # show how long they've been gone
         put_centered(canvas, style["label"], x, y + 125, 1.2, style["text"], 2)
         put_centered(canvas, format_duration(status.seconds_in_state), x, y + 185,
                      1.4, style["text"], 3)
@@ -96,13 +85,13 @@ def draw_card(canvas, x, y, desk_name, status, long_reserved_minutes):
 
 
 def format_duration(seconds):
-    """Turn 125.4 seconds into '2m 05s'."""
+    # 125 -> "2m 05s"
     minutes, seconds = divmod(int(seconds), 60)
     return f"{minutes}m {seconds:02d}s"
 
 
 def format_limit(minutes):
-    """60 -> '1+ hr', 30 -> '30+ min', 0.5 -> '30+ sec' (demo settings use very short limits)."""
+    # 60 -> "1+ hr", 30 -> "30+ min", 0.25 -> "15+ sec" (demo settings)
     if minutes >= 60 and minutes % 60 == 0:
         return f"{minutes // 60:g}+ hr"
     if minutes >= 1:
@@ -110,21 +99,18 @@ def format_limit(minutes):
     return f"{round(minutes * 60)}+ sec"
 
 
-# ---- 4. Small drawing helpers ----
-
 def put_text(canvas, text, origin, scale, color, thickness):
     cv2.putText(canvas, text, origin, FONT, scale, color, thickness, cv2.LINE_AA)
 
 
 def put_centered(canvas, text, card_x, baseline_y, scale, color, thickness):
-    """Draw text centered horizontally inside a card."""
     text_width = cv2.getTextSize(text, FONT, scale, thickness)[0][0]
     put_text(canvas, text, (card_x + (CARD_WIDTH - text_width) // 2, baseline_y),
              scale, color, thickness)
 
 
 def rounded_rectangle(canvas, x, y, width, height, radius, color):
-    """OpenCV has no rounded rectangle, so build one from 2 rectangles + 4 circles."""
+    # opencv doesn't have one, so 2 rectangles + 4 corner circles
     cv2.rectangle(canvas, (x + radius, y), (x + width - radius, y + height), color, -1)
     cv2.rectangle(canvas, (x, y + radius), (x + width, y + height - radius), color, -1)
     for corner_x in (x + radius, x + width - radius):

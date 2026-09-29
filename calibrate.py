@@ -1,9 +1,7 @@
-"""
-calibrate.py - Draw where each desk is in the camera view.
+"""Click the 4 corners of each desk (up to 4 desks) and save them to settings.json.
 
-Run `python calibrate.py`, then click 4 corners around each desk (include
-the chair, so a seated person's body lands inside the zone). Up to 4 desks.
-Keys:  n = next desk   s = save   r = reset   q = quit
+Include the chair in the zone so a seated person lands inside it.
+Keys: n = next desk, s = save, r = reset, q = quit
 """
 
 import argparse
@@ -18,43 +16,37 @@ MAX_DESKS = 4
 POINTS_PER_DESK = 4
 WINDOW = "desk-watch calibration"
 
-DONE_COLOR = (80, 175, 76)       # green (OpenCV colors are Blue, Green, Red)
+DONE_COLOR = (80, 175, 76)       # green (opencv is BGR)
 DRAWING_COLOR = (40, 200, 245)   # yellow
 
 
-# ---- 1. Keep track of what has been drawn ----
-
 class Calibration:
     def __init__(self):
-        self.zones = []     # finished desk zones, each a list of 4 [x, y] points
-        self.current = []   # corners of the desk being drawn right now
+        self.zones = []     # finished desks
+        self.current = []   # desk being drawn
 
     def on_click(self, event, x, y, flags, param):
-        """OpenCV calls this on every mouse event; we only care about left clicks."""
         if event != cv2.EVENT_LBUTTONDOWN:
             return
         if len(self.current) < POINTS_PER_DESK and len(self.zones) < MAX_DESKS:
             self.current.append([x, y])
 
     def next_desk(self):
-        """Finish the current zone (only once all 4 corners are placed)."""
         if len(self.current) == POINTS_PER_DESK:
             self.zones.append(self.current)
             self.current = []
 
     def reset(self):
-        """Throw away every zone and start over."""
         self.zones = []
         self.current = []
 
     def finished_zones(self):
-        """All complete zones, including the one being drawn if it has 4 corners."""
+        # counts the current desk too if it has all 4 corners
         if len(self.current) == POINTS_PER_DESK:
             return self.zones + [self.current]
         return self.zones
 
     def instructions(self):
-        """The line of help text shown at the top of the window."""
         desk_number = len(self.zones) + 1
         if len(self.zones) >= MAX_DESKS:
             return f"All {MAX_DESKS} desks drawn.  s = save   r = reset   q = quit"
@@ -62,8 +54,6 @@ class Calibration:
             return f"Desk {desk_number}: click corner {len(self.current) + 1} of {POINTS_PER_DESK}"
         return f"Desk {desk_number} done.  n = next desk   s = save   r = reset   q = quit"
 
-
-# ---- 2. Draw the zones on top of the camera image ----
 
 def draw(frame, calibration):
     for number, zone in enumerate(calibration.zones, start=1):
@@ -75,7 +65,7 @@ def draw(frame, calibration):
         closed = len(calibration.current) == POINTS_PER_DESK
         draw_zone(frame, calibration.current, DRAWING_COLOR, closed)
 
-    # Instruction bar across the top, dark background so it is always readable.
+    # dark bar at the top so the text is readable
     cv2.rectangle(frame, (0, 0), (frame.shape[1], 36), (30, 30, 30), -1)
     cv2.putText(frame, calibration.instructions(), (10, 25),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
@@ -88,15 +78,13 @@ def draw_zone(frame, points, color, closed):
         cv2.line(frame, tuple(start), tuple(end), color, 2)
 
 
-# ---- 3. Save zones into the settings file ----
-
 def save(calibration, path):
-    """Write the desk zones to settings, keeping any other settings already there."""
     zones = calibration.finished_zones()
     if not zones:
         print("Nothing to save yet - draw at least one desk (4 corners).")
         return
 
+    # keep whatever else is already in the settings file
     settings = load_settings(path) if Path(path).exists() else dict(DEFAULTS)
     settings["desks"] = [
         {"id": f"desk_{number}", "name": f"Desk {number}", "zone": zone}
@@ -105,8 +93,6 @@ def save(calibration, path):
     save_settings(settings, path)
     print(f"Saved {len(zones)} desk(s) to {path}")
 
-
-# ---- 4. Main loop: show camera, handle keys ----
 
 def main():
     parser = argparse.ArgumentParser(description="Draw desk zones for desk-watch")
